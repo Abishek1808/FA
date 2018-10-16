@@ -1,0 +1,159 @@
+<html>
+    <head>
+     <style>
+         .downBar{
+            background-color: #555;
+            position: absolute;
+            bottom:0;
+            width:100%;
+            height:10%;
+            background:#6cf;
+        }
+        .sideButton{
+            background-color: red;
+            padding: 20px;
+            display: block;
+            border:none;
+            margin:8px;
+            border-radius: 50%;
+        }
+        .sideButton1{
+            background-color: green;
+            padding: 40px;
+            display: block;
+            border:none;
+            margin:10px;
+            border-radius: 50%;
+
+        }
+        .sideButton2{
+            background-color: red;
+            padding: 40px;
+            display: block;
+            border:none;
+            margin:10px;
+            border-radius: 50%;
+        }
+        .sideButton3{
+            background-color: yellow;
+            padding: 40px;
+            display: block;
+            border:none;
+            margin:10px;
+            border-radius: 50%;
+        }
+        .button{
+            float:left;
+        }
+        .button2{
+            float:right;
+        }
+        .text{
+            float:left;
+        }
+        h2{
+            color: white;
+        }
+        .Filter{
+            float:left;
+            font-size: 30px;
+            text-align: center;
+            color: white;
+            positon :relative;
+        }
+        .Compartment{
+            float:right;
+            font-size: 30px;
+            color:white;
+        }
+        .middle1{
+            height: 100px;
+            width: 400px;
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            margin-top: -100px;
+            margin-left: -200px;
+            
+
+        }
+        .middle2{
+            height: 100px;
+            width: 400px;
+            position: fixed;
+            top: 60%;
+            left: 50%;
+            margin-top: -100px;
+            margin-left: -200px;
+        
+
+        }
+        .dfvalue1{
+            font-size:80px;
+            float:left;
+        }
+        .dfvalue2{
+            font-size:20px;
+            float:left;
+            padding-top: 110px;
+            left:50px;
+
+
+        }
+    </style>
+    </head>
+    <body bgcolor="#0000FF">
+        <div class="button">
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        <button class="sideButton"></button>
+        </div>
+        <div class="text">
+            <h2>General Fault</h2>
+            <h2>Differential Pressure</h2>
+            <h2>System Pressure</h2>
+            <h2>Manifoid Pressure</h2>
+            <h2>Isolation Valve Malfunction</h2>
+            <h2>Valve Malfunction</h2>
+            <h2>Hopper High Level</h2>
+            <h2>Dust High Alarm</h2>
+            <h2>Communication</h2>
+            <h2>Intel Damper</h2>
+            <h2>Outlet Damper</h2>
+        </div>
+        <div class="middle1">
+            <h1 class="h1dfv">Differential Pressure</h1>
+            <p class="dfvalue1">30.5</p>
+            <p class="dfvalue2">mbar</p>
+
+        </div>
+        <div class="middle2">
+                <h1 class="h1dfv">System Pressure</h1>
+                <p class="dfvalue1">4.8</p>
+                <p class="dfvalue2">bar</p>
+                
+        </div>
+
+        <div class="button2">
+                <button class="sideButton1">START</button>
+                <button class="sideButton2">STOP</button>
+                <button class="sideButton3">RESET</button>
+                <h1>Modes</h1>
+        </div>
+        <div class="downBar">
+            <p class="Filter" >Filter Stopped</p>
+            <p class="Compartment">Compartment  21   Valve   35</p>
+
+        </div>
+   
+
+    </body>
+</html>
