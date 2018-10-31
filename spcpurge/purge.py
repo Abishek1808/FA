@@ -27,7 +27,7 @@ sendTime = now.replace(hour=23, minute=45, second=0, microsecond=0)
 start=1
 
 def get_FromConfig(param):
-    with open('Configs/OnlinePurgeConfig.csv', 'rU') as infile:
+    with open('OnlinePurgeConfig.csv', 'rU') as infile:
       reader = csv.DictReader(infile)
       data = {}
       for row in reader:
@@ -77,33 +77,39 @@ def writeCoilFalse(Id,add):
     rcl=client.write_coils(add,True,unit=Id)
     client.close()
 
-def gen_writeCoilSeq(Cmps,Mafs,V): # compartments,Manifolds,Valvespermanifolds
+def gen_writeCoilSeq(valv): # compartments,Manifolds,Valvespermanifolds
     IDseq=[]
-    fin=[]
-    maniSeq=[]
-    for i in range (len(V)):
-        print (V[i])
-        for j in range (len(V[i])):
-            temp=[]
+    k=0
+    ot=0
+    id=0
+    oTT=[]
+    IDA=[]
+    for i in range (len(valv)):
+        temp=[]
+        ot=ot+1
+        idArrtemp=[]
+        for j in range (len(valv[i])):
+            id=id+1
+            oTT.append(ot)
             k=0
-            for h in range (0,V[i][j]):
+            for h in range (valv[i][j]):
                 k=k+1
+                idArrtemp.append(id)
                 temp.append(k)
-            IDseq.append(temp)
-    print (IDseq)
-    l=max(IDseq,key=len)
-    print (l)
-    for i in range (len(l)):
-        for j in range (len(IDseq)):
-            try:
-                print (IDseq[j][i])
+        IDA.append(idArrtemp)
+        IDseq.append(temp)
+    fin=[]
+    finID=[]
+    maxi=max(IDseq,key=len)
+    print ('maxi   '+str(maxi))
+    for i in range (len(maxi)):
+        try:
+            for j in range (len(maxi)):
                 fin.append(IDseq[j][i])
-                print ("J  :"+str(j+1))
-                maniSeq.append(j+1)
-            except IndexError:
-                print ('DoNothing')
-    print ("+++++++++++++++++++++++++++++++")
-    return fin,maniSeq
+                finID.append(IDA[j][i])
+        except IndexError:
+            a=0
+    return fin,finID
 
 def get_startStatus():
     return int(redis.get('st'))
@@ -130,16 +136,17 @@ try:
     compartments=get_FromConfig('COMPARTMENTS')
     manifolds=get_FromConfig('MANIFOLDS')
     vPmf=get_FromConfig('VALVES')
+    print (vPmf)
     maxThreshold=get_FromConfig('THRESHOLD MAX')
     minThreshold=get_FromConfig('THRESHOLD MIN')
-    compartments=convert_Toint(compartments)
-    manifolds=convert_Toint(manifolds)
+    #compartments=convert_Toint(compartments)
+    #manifolds=convert_Toint(manifolds)
     vPmf=convertArr_Toint(vPmf)
     maxThreshold=int(maxThreshold[0])
     minThreshold=int(minThreshold[0])
     print ("MMMMMMTTTTTTTTT   "+str(maxThreshold))
     print ("mmmmmmttttttttttt   "+str(minThreshold))
-    IDarray,ManifoldOrd=gen_writeCoilSeq(compartments,manifolds,vPmf)
+    IDarray,ManifoldOrd=gen_writeCoilSeq(vPmf)
     print (IDarray)
     print (ManifoldOrd)
     while True:
