@@ -19,8 +19,11 @@ import modbus_tk.defines as cst
 from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 
 
+maniStartID=51
+ivStartID=101
+
 #client = ModbusClient(method='rtu', port=porta,timeout=2, parity='E', stopbits=1, baudrate=9600, unit=1)
-client = ModbusClient('192.168.137.1', port=502, timeout=1, parity='N', baudrate=9600, unit=1)
+client = ModbusClient('localhost', port=502, timeout=2, parity='N', baudrate=9600, unit=1)
 redis = redis.StrictRedis(host='localhost', port=6379, db=0)
 now = datetime.datetime.now()
 sendTime = now.replace(hour=23, minute=45, second=0, microsecond=0)
@@ -38,6 +41,29 @@ def get_FromConfig(param):
             data[header] = [value]
     return data[param]
 
+def get_maniPressure(I):
+    ID=int(maniStartID+I)
+    client.connect()
+    print ("Reading ManiPres   " +str(ID))
+    rp = client.read_holding_registers(1, 2, unit=ID)
+    client.close()
+    pressure=rp.registers
+    pressure=int(pressure[0])
+    manifold
+    redis.set('dp',pressure)
+    return pressure
+
+def get_IVStat(I):
+    ID=ivStartID+I
+    rr = client.read_coils(0, 1, unit=ID)
+    client.close()
+    stat=rr.bits
+    stat=int(stat[0])
+    coilRef='IV'+str(I)
+    redis.set(coilRef,stat)
+    print ( coilRef+" :"+str(stat))
+    return stat
+    
 def convert_Toint(arr):
     for i in range (len(arr)):
         print (arr[i])
@@ -57,10 +83,6 @@ def convertArr_Toint(arr):
 def getpressureData():
     client.connect()
     rr = client.read_holding_registers(1, 1, unit=50)
-    if not hasattr(rr,'registers'):
-        print ('recurring---')
-        time.sleep(4)
-        getmodbusData(rL)
     client.close()
     pressure=rr.registers
     pressure=int(pressure[0])
@@ -116,16 +138,15 @@ def get_startStatus():
 
 
 def initializePurge(Valve,Manifold,MinPres):
-    print (Valve)
-    print (Manifold)
     for i in range (len(Manifold)):
             if(getpressureData()>MinPres and get_startStatus()==1):
-                print ("purging manifold"+str(Manifold[i])+"---valve"+str(Valve[i]))
-                #writeCoilTrue(Manifold[i],Valve[j])
-                time.sleep(4)
-                #writeCoilFalse(i,j)
+                if(get_IVStat(Manifold[i])==1 and get_maniPressure(Manifold[i])==3 ):
+                    print ("purging manifold"+str(Manifold[i])+"---valve"+str(Valve[i]))
+                    #writeCoilTrue(Manifold[i],Valve[j])
+                    time.sleep(4)
+                    #writeCoilFalse(i,j)
 
-maxThreshold=20     ###
+maxThreshold=20     ###get_maniPressure(Manifold[i])==3 and 
 minThreshold=15     ###
 compartments=2      ###
 manifolds=[1,2,3,4] ###
@@ -136,7 +157,6 @@ try:
     compartments=get_FromConfig('COMPARTMENTS')
     manifolds=get_FromConfig('MANIFOLDS')
     vPmf=get_FromConfig('VALVES')
-    print (vPmf)
     maxThreshold=get_FromConfig('THRESHOLD MAX')
     minThreshold=get_FromConfig('THRESHOLD MIN')
     #compartments=convert_Toint(compartments)
@@ -147,8 +167,6 @@ try:
     print ("MMMMMMTTTTTTTTT   "+str(maxThreshold))
     print ("mmmmmmttttttttttt   "+str(minThreshold))
     IDarray,ManifoldOrd=gen_writeCoilSeq(vPmf)
-    print (IDarray)
-    print (ManifoldOrd)
     while True:
         #start=int(redis.get('st'))
         pressure=getpressureData()
