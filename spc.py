@@ -51,6 +51,10 @@ sendTime = now.replace(hour=23, minute=45, second=0, microsecond=0)
 def getmodbusData(rL):
     client.connect()
     rr = client.read_holding_registers(1, rL, unit=1)
+    if not hasattr(rr,'registers'):
+        print ('recurring---')
+        time.sleep(4)
+        getmodbusData(rL)
     client.close()
     return rr.registers
 

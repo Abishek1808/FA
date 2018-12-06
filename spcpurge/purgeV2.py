@@ -19,15 +19,39 @@ import modbus_tk.defines as cst
 from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 
 
-maniStartID=51
-ivStartID=101
-
 #client = ModbusClient(method='rtu', port=porta,timeout=2, parity='E', stopbits=1, baudrate=9600, unit=1)
-client = ModbusClient('localhost', port=502, timeout=2, parity='N', baudrate=9600, unit=1)
+client = ModbusClient('localhost', port=502, timeout=2, parity='E', baudrate=9600, unit=1)
 redis = redis.StrictRedis(host='localhost', port=6379, db=0)
 now = datetime.datetime.now()
 sendTime = now.replace(hour=23, minute=45, second=0, microsecond=0)
 start=1
+
+min_sysPres=0
+max_sysPres=6
+min_maniPres=0
+min_maniPres=6
+min_difPres=0
+max_difPres=50
+maniThreshold=3
+
+hopperCount=4
+
+
+def convertDiffPres(curVal):
+    curVal=float(curVal/100)
+    p=float((((max_difPres-min_difPres)/16)*(curVal-4))+min_difPres)
+    return p
+
+def convertSysPres(curVal):
+    curVal=float(curVal/100)
+    p=float((((max_sysPres-min_sysPres)/16)*(curVal-4))+min_sysPres)
+    return p
+
+def convertManiPres(curVal):
+    curVal=float(curVal/100)
+    p=float((((max_maniPres-min_maniPres)/16)*(curVal-4))+min_maniPres)
+    return p
+
 
 def get_FromConfig(param):
     with open('OnlinePurgeConfig.csv', 'rU') as infile:
@@ -42,23 +66,26 @@ def get_FromConfig(param):
     return data[param]
 
 def get_maniPressure(I):
-    ID=int(maniStartID+I)
     client.connect()
     print ("Reading ManiPres   " +str(ID))
-    rp = client.read_holding_registers(1, 2, unit=ID)
+    rp = client.read_holding_registers(1,10, unit=ID)
     client.close()
     pressure=rp.registers
     pressure=int(pressure[0])
-    manifold
-    redis.set('dp',pressure)
+    pressure=convertManiPres(pressure)
+    maniRef = 'mP'+str(I)
+    redis.set(maniRef,pressure)
     return pressure
 
 def get_IVStat(I):
     ID=ivStartID+I
-    rr = client.read_coils(0, 1, unit=ID)
+    rr = client.read_holding_registers(44, 2, unit=ID)
     client.close()
     stat=rr.bits
-    stat=int(stat[0])
+    stat=int(stat[1])
+    stat="{0:b}".format(stat)
+    binVals=list(stat)
+    stat=binVals[10]
     coilRef='IV'+str(I)
     redis.set(coilRef,stat)
     print ( coilRef+" :"+str(stat))
@@ -80,14 +107,26 @@ def convertArr_Toint(arr):
             arr[i][j]=int(arr[i][j])
     return arr
 
-def getpressureData():
+def getMasterpressureData():
     client.connect()
-    rr = client.read_holding_registers(1, 1, unit=50)
+    rr = client.read_holding_registers(1, 10, unit=99)
     client.close()
     pressure=rr.registers
-    pressure=int(pressure[0])
+    systemPres=int(rr.registers[0])
+    pressure=int(pressure[1])
+    bbd1=int(rr.registers[2])
+    bbd2=int(rr.registers[3])
+    bbd3=int(rr.registers[4])
+    bbd4=int(rr.registers[5])
+    inletTemp=int(rr.registers[6])
+    reds.set('SysPsi',systemPres)
     redis.set('dp',pressure)
     return pressure
+
+def bgsystemMonitor():
+    getMasterpressureData()
+    time.sleep(0.5)
+    
 
 def writeCoilTrue(Id,add):
     client.connect()
@@ -137,14 +176,28 @@ def get_startStatus():
     return int(redis.get('st'))
 
 
+
+def monitor_ManifoldPres(I):
+    ##monitor drop till 2.4 and raise to 3
+
 def initializePurge(Valve,Manifold,MinPres):
     for i in range (len(Manifold)):
-            if(getpressureData()>MinPres and get_startStatus()==1):
-                if(get_IVStat(Manifold[i])==1 and get_maniPressure(Manifold[i])==3 ):
+            update_hopper()
+            if(getMasterpressureData()>MinPres and get_startStatus()==1):
+                if(get_IVStat(Manifold[i])==1 and get_maniPressure(Manifold[i])==maniThreshold ):
                     print ("purging manifold"+str(Manifold[i])+"---valve"+str(Valve[i]))
-                    #writeCoilTrue(Manifold[i],Valve[j])
-                    time.sleep(4)
+                    writeCoilTrue(Manifold[i],Valve[j])
+                    time.sleep(2)
                     #writeCoilFalse(i,j)
+def update_hopper():
+    start=101
+    hopperTempRef="H_Temp"
+    for i in range (1,hopperCount):
+        rr=client.read_holding_registers(1,10,unit=i)
+        temp=rr.registers[0]
+        hopperTempRef=hopperTempRef+str(i)
+        redis.set(hopperTempRef,temp)
+    
 
 maxThreshold=20     ###get_maniPressure(Manifold[i])==3 and 
 minThreshold=15     ###
@@ -167,12 +220,14 @@ try:
     print ("MMMMMMTTTTTTTTT   "+str(maxThreshold))
     print ("mmmmmmttttttttttt   "+str(minThreshold))
     IDarray,ManifoldOrd=gen_writeCoilSeq(vPmf)
+    MasterScan = Process(target=bgsystemMonitor)
+    MasterScan.start()
     while True:
         #start=int(redis.get('st'))
-        pressure=getpressureData()
+        pressure=getMasterpressureData()
         print (' Normal Operation pressure  :' + str(pressure)+" ; maxT  :"+str(maxThreshold))
         while(get_startStatus()==1):
-            if( getpressureData() >= maxThreshold):
+            if( getMasterpressureData() >= maxThreshold):
                     print ('initializing purging sequence')
                     initializePurge(IDarray,ManifoldOrd,minThreshold)
             else:
@@ -181,6 +236,7 @@ try:
         time.sleep(2)
                        
 except KeyboardInterrupt:
+    MasterScan.stop()
     client.close()
 
 
